@@ -10,7 +10,7 @@
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
 
-    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
         <h1 class="text-2xl font-bold text-indigo-600">VendorFlow</h1>
         <button onclick="toggleModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
             + New Project
@@ -20,7 +20,7 @@
     <main class="max-w-7xl mx-auto p-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Active Projects</p>
+                <p class="text-sm text-gray-500">Total Projects</p>
                 <p id="stat-active" class="text-3xl font-bold text-indigo-600">0</p>
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">Pending</p><p class="text-3xl font-bold text-yellow-500">0</p></div>
@@ -36,7 +36,7 @@
                         <th class="px-6 py-3 text-sm font-semibold text-gray-600">Vendor</th>
                         <th class="px-6 py-3 text-sm font-semibold text-gray-600">Expected Delivery</th>
                         <th class="px-6 py-3 text-sm font-semibold text-gray-600">Status</th>
-                        <th class="px-6 py-3 text-sm font-semibold text-gray-600">Action</th>
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-600 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody id="project-list" class="divide-y divide-gray-100"></tbody>
@@ -45,23 +45,35 @@
     </main>
 
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-2xl w-full max-w-md p-8">
+        <div class="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl">
             <h2 class="text-xl font-bold mb-6">Create New Assignment</h2>
             <form id="project-form" class="space-y-4">
-                <div><label class="block text-sm font-medium mb-1">Project Name</label><input type="text" id="p-name" class="w-full border rounded-lg p-2" required></div>
-                <div><label class="block text-sm font-medium mb-1">Vendor Name</label><input type="text" id="p-vendor" class="w-full border rounded-lg p-2" required></div>
-                <div><label class="block text-sm font-medium mb-1">Vendor WhatsApp</label><input type="text" id="p-mobile" placeholder="+91..." class="w-full border rounded-lg p-2" required></div>
-                <div><label class="block text-sm font-medium mb-1">Deadline</label><input type="datetime-local" id="p-deadline" class="w-full border rounded-lg p-2" required></div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Project Name</label>
+                    <input type="text" id="p-name" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Vendor Name</label>
+                    <input type="text" id="p-vendor" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Vendor WhatsApp (+CountryCode)</label>
+                    <input type="text" id="p-mobile" placeholder="+91..." class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Deadline</label>
+                    <input type="datetime-local" id="p-deadline" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
                 <div class="flex gap-3 mt-6">
-                    <button type="button" onclick="toggleModal()" class="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
-                    <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg">Assign & Notify</button>
+                    <button type="button" onclick="toggleModal()" class="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-bold">Assign & Notify</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIGURATION ---
+        // --- 1. CONFIGURATION (Updated with your URL) ---
         const firebaseConfig = {
             apiKey: "AIzaSyCwAgdMQcaX91d98IGRZEmUcaD-54lqdDw",
             authDomain: "webapp-97f44.firebaseapp.com",
@@ -69,8 +81,7 @@
             storageBucket: "webapp-97f44.firebasestorage.app",
             messagingSenderId: "907600719303",
             appId: "1:907600719303:web:afa1d010eb867d652a3de2",
-            // NOTE: Add your Database URL from the Firebase Realtime Database tab
-            databaseURL: "https://webapp-97f44-default-rtdb.firebaseio.com" 
+            databaseURL: "https://webapp-97f44-default-rtdb.asia-southeast1.firebasedatabase.app" 
         };
 
         // --- 2. INITIALIZATION ---
@@ -99,17 +110,22 @@
                 timestamp: Date.now()
             };
 
-            // Push to Firebase
             db.ref('projects').push(projectData)
                 .then(() => {
-                    console.log("Data saved!");
                     toggleModal();
-                    e.target.reset();
+                    document.getElementById('project-form').reset();
                 })
-                .catch((error) => alert("Error: " + error.message));
+                .catch((err) => alert("Error: " + err.message));
         };
 
-        // --- 5. REAL-TIME SYNC ---
+        // Delete function
+        function deleteProject(key) {
+            if(confirm("Are you sure you want to delete this project?")) {
+                db.ref('projects/' + key).remove();
+            }
+        }
+
+        // --- 5. REAL-TIME UPDATES ---
         db.ref('projects').on('value', (snapshot) => {
             const list = document.getElementById('project-list');
             list.innerHTML = '';
@@ -117,19 +133,20 @@
 
             snapshot.forEach((child) => {
                 const p = child.val();
+                const key = child.key;
                 count++;
                 const row = `
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium">${p.projectName}</td>
-                        <td class="px-6 py-4">${p.vendorName}</td>
-                        <td class="px-6 py-4 text-gray-500">${new Date(p.expectedDelivery).toLocaleString()}</td>
+                    <tr class="hover:bg-gray-50 transition border-b border-gray-100">
+                        <td class="px-6 py-4 font-semibold text-gray-800">${p.projectName}</td>
+                        <td class="px-6 py-4 text-gray-600">${p.vendorName}</td>
+                        <td class="px-6 py-4 text-gray-500 text-sm">${new Date(p.expectedDelivery).toLocaleString()}</td>
                         <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold ${getStatusClass(p.status)}">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${getStatusClass(p.status)}">
                                 ${p.status}
                             </span>
                         </td>
-                        <td class="px-6 py-4">
-                            <button class="text-indigo-600 hover:underline">Manage</button>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="deleteProject('${key}')" class="text-red-500 hover:text-red-700 text-sm font-medium">Delete</button>
                         </td>
                     </tr>
                 `;
