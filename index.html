@@ -3,47 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VendorFlow | Pro Dashboard</title>
+    <title>VendorFlow | Final Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans">
+<body class="bg-gray-100 text-gray-900 font-sans">
 
-    <nav class="bg-indigo-900 text-white px-6 py-2 flex justify-end gap-6 text-xs font-bold shadow-md">
-        <button onclick="switchView('admin')" class="hover:text-indigo-200 transition">ADMIN DASHBOARD</button>
-        <button onclick="switchView('vendor')" class="hover:text-indigo-200 transition">VENDOR PORTAL</button>
+    <nav class="bg-indigo-900 text-white px-6 py-2 flex justify-end gap-6 text-[10px] font-bold uppercase tracking-widest">
+        <button onclick="switchView('admin')" class="hover:text-indigo-300">Admin Panel</button>
+        <button onclick="switchView('vendor')" class="hover:text-indigo-300">Vendor Portal</button>
     </nav>
 
-    <nav class="bg-white border-b border-gray-200 px-6 py-5 flex justify-between items-center shadow-sm">
-        <h1 id="dashboard-title" class="text-2xl font-extrabold text-indigo-600 font-sans">Admin Dashboard</h1>
-        <div class="flex gap-3">
-            <button id="export-btn" onclick="exportToExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-emerald-700 shadow-md transition">
-                Export Report
-            </button>
-            <button id="add-btn" onclick="toggleModal()" class="bg-indigo-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition">
-                + New Project
-            </button>
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+        <h1 id="dashboard-title" class="text-2xl font-black text-indigo-600">Admin Dashboard</h1>
+        <div class="flex gap-2">
+            <button id="export-btn" onclick="exportToExcel()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-600 shadow-sm">Excel Report</button>
+            <button id="add-btn" onclick="toggleModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 shadow-sm">+ Assign</button>
         </div>
-    </nav>
+    </header>
 
     <main class="max-w-7xl mx-auto p-6">
-        <div id="project-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div id="project-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
     </main>
 
-    <div id="modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">Assign Project</h2>
-            <form id="project-form" class="space-y-4">
-                <input type="text" id="p-name" placeholder="Project Name" class="w-full border rounded-xl p-3" required>
-                <input type="text" id="p-vendor" placeholder="Vendor Name" class="w-full border rounded-xl p-3" required>
-                <input type="datetime-local" id="p-deadline" class="w-full border rounded-xl p-3" required>
-                <input type="url" id="p-link" placeholder="Asset Link (Drive/Dropbox)" class="w-full border rounded-xl p-3">
-                <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="toggleModal()" class="flex-1 px-4 py-3 border rounded-xl font-bold">Cancel</button>
-                    <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold">Create</button>
+    <div id="modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl">
+            <h2 class="text-xl font-bold mb-4">New Project</h2>
+            <form id="project-form" class="space-y-3">
+                <input type="text" id="p-name" placeholder="Project Name" class="w-full border rounded-lg p-2 text-sm" required>
+                <input type="text" id="p-vendor" placeholder="Vendor Name" class="w-full border rounded-lg p-2 text-sm" required>
+                <input type="email" id="p-email" placeholder="Vendor Email ID" class="w-full border rounded-lg p-2 text-sm" required>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-400">DEADLINE</label>
+                    <input type="datetime-local" id="p-deadline" class="w-full border rounded-lg p-2 text-sm" required>
+                </div>
+                <input type="url" id="p-link" placeholder="Asset Link (Drive/Dropbox)" class="w-full border rounded-lg p-2 text-sm">
+                
+                <div class="flex gap-2 pt-4">
+                    <button type="button" onclick="toggleModal()" class="flex-1 py-2 border rounded-lg text-sm font-bold">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold">Create</button>
                 </div>
             </form>
         </div>
@@ -63,108 +64,129 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let projectsData = {}; // Global variable to store projects for export
-
+        let allData = {};
         let currentView = 'admin';
-        function toggleModal() { document.getElementById('modal').classList.toggle('hidden'); }
+
+        // --- 2. CORE UI LOGIC ---
+        function toggleModal() { 
+            document.getElementById('modal').classList.toggle('hidden'); 
+        }
 
         function switchView(view) {
             currentView = view;
             document.getElementById('dashboard-title').innerText = view === 'admin' ? "Admin Dashboard" : "Vendor Portal";
             document.getElementById('add-btn').style.display = view === 'admin' ? 'block' : 'none';
             document.getElementById('export-btn').style.display = view === 'admin' ? 'block' : 'none';
-            renderProjects();
+            renderUI(allData);
         }
 
-        // --- 2. EXCEL EXPORT ENGINE ---
-        function exportToExcel() {
-            if (Object.keys(projectsData).length === 0) return alert("No data to export!");
-
-            const wb = XLSX.utils.book_new();
-            
-            // 1. Create Summary Data
-            const summaryRows = Object.values(projectsData).map(p => ({
-                "Project Name": p.projectName,
-                "Vendor Name": p.vendorName,
-                "Deadline": new Date(p.expectedDelivery).toLocaleString(),
-                "Status": p.status,
-                "Link": p.assetLink || "N/A"
-            }));
-            const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-            XLSX.utils.book_append_sheet(wb, wsSummary, "Monthly Summary");
-
-            // 2. Create Vendor-Specific Sheets
-            const vendors = [...new Set(Object.values(projectsData).map(p => p.vendorName))];
-            
-            vendors.forEach(vendor => {
-                const vendorRows = Object.values(projectsData)
-                    .filter(p => p.vendorName === vendor)
-                    .map(p => ({
-                        "Project Name": p.projectName,
-                        "Deadline": new Date(p.expectedDelivery).toLocaleString(),
-                        "Status": p.status,
-                        "Asset Link": p.assetLink || "N/A"
-                    }));
-                const wsVendor = XLSX.utils.json_to_sheet(vendorRows);
-                XLSX.utils.book_append_sheet(wb, wsVendor, vendor.substring(0, 31)); // Sheets limited to 31 chars
-            });
-
-            // 3. Download
-            XLSX.writeFile(wb, `VendorFlow_Report_${new Date().getMonth() + 1}_2026.xlsx`);
-        }
-
-        // --- 3. DATABASE OPERATIONS (same as before) ---
-        document.getElementById('project-form').onsubmit = (e) => {
+        // --- 3. DATABASE OPERATIONS ---
+        document.getElementById('project-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            const projectData = {
+            const data = {
                 projectName: document.getElementById('p-name').value,
                 vendorName: document.getElementById('p-vendor').value,
+                vendorEmail: document.getElementById('p-email').value,
                 expectedDelivery: document.getElementById('p-deadline').value,
                 assetLink: document.getElementById('p-link').value || "",
-                status: "Didn't Start",
+                status: "Ongoing",
                 timestamp: Date.now()
             };
-            db.ref('projects').push(projectData).then(() => { toggleModal(); e.target.reset(); });
-        };
 
-        function updateProject(key, field, value) {
-            let updates = {}; updates[field] = value;
-            db.ref(`projects/${key}`).update(updates);
+            db.ref('projects').push(data).then(() => {
+                toggleModal();
+                this.reset();
+            }).catch(err => alert("Error saving: " + err.message));
+        });
+
+        function updateField(key, field, val) {
+            db.ref('projects/' + key).update({ [field]: val });
         }
 
-        function renderProjects() {
-            db.ref('projects').on('value', (snapshot) => {
-                projectsData = snapshot.val() || {}; // Sync global data for export
-                const container = document.getElementById('project-container');
-                container.innerHTML = '';
-                
-                snapshot.forEach((child) => {
-                    const p = child.val();
-                    const key = child.key;
-                    const card = `
-                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
-                            <div class="flex justify-between items-start">
-                                <h3 class="font-bold text-lg">${p.projectName}</h3>
-                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${p.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${p.status}</span>
-                            </div>
-                            <p class="text-sm font-semibold text-gray-600">👤 ${p.vendorName}</p>
-                            <div class="bg-gray-50 p-3 rounded-xl text-xs space-y-2">
-                                <p class="text-gray-400">🔗 Link: ${p.assetLink ? `<a href="${p.assetLink}" target="_blank" class="text-indigo-600">Open Folder</a>` : 'No link'}</p>
-                            </div>
-                            ${currentView === 'vendor' ? `
-                                <select onchange="updateProject('${key}', 'status', this.value)" class="w-full border rounded-xl p-2 text-xs font-bold">
-                                    <option value="Didn't Start" ${p.status === 'Didn't Start' ? 'selected' : ''}>Didn't Start</option>
-                                    <option value="Ongoing" ${p.status === 'Ongoing' ? 'selected' : ''}>Ongoing</option>
-                                    <option value="Completed" ${p.status === 'Completed' ? 'selected' : ''}>Completed</option>
-                                </select>
-                                <input type="url" placeholder="Update link..." onblur="updateProject('${key}', 'assetLink', this.value)" class="w-full border rounded-xl p-2 text-xs mt-2" value="${p.assetLink}">
-                            ` : `<button onclick="db.ref('projects/${key}').remove()" class="text-red-400 text-xs font-bold">DELETE</button>`}
-                        </div>`;
-                    container.insertAdjacentHTML('beforeend', card);
-                });
+        function deleteProj(key) {
+            if(confirm("Delete this?")) db.ref('projects/' + key).remove();
+        }
+
+        // --- 4. EXCEL EXPORT ---
+        function exportToExcel() {
+            if (!allData) return alert("No data yet.");
+            const wb = XLSX.utils.book_new();
+            
+            // Summary Sheet
+            const summary = Object.values(allData).map(p => ({
+                "Project": p.projectName,
+                "Vendor": p.vendorName,
+                "Email": p.vendorEmail,
+                "Status": p.status,
+                "Deadline": p.expectedDelivery,
+                "Link": p.assetLink
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "All Projects");
+
+            // Individual Vendor Sheets
+            const vendors = [...new Set(Object.values(allData).map(p => p.vendorName))];
+            vendors.forEach(v => {
+                const filtered = Object.values(allData).filter(p => p.vendorName === v).map(p => ({
+                    "Project": p.projectName,
+                    "Status": p.status,
+                    "Deadline": p.expectedDelivery,
+                    "Link": p.assetLink
+                }));
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filtered), v.substring(0,30));
+            });
+
+            XLSX.writeFile(wb, `VendorFlow_Monthly_Report.xlsx`);
+        }
+
+        // --- 5. RENDER ENGINE ---
+        function renderUI(data) {
+            const container = document.getElementById('project-container');
+            container.innerHTML = '';
+            if(!data) return;
+
+            Object.keys(data).forEach(key => {
+                const p = data[key];
+                const card = `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex flex-col gap-3">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-gray-800 uppercase text-sm tracking-tight">${p.projectName}</h3>
+                        <span class="text-[10px] font-black px-2 py-1 rounded bg-indigo-50 text-indigo-600">${p.status}</span>
+                    </div>
+                    
+                    <div class="text-[11px] text-gray-500">
+                        <p><strong>VENDOR:</strong> ${p.vendorName}</p>
+                        <p><strong>EMAIL:</strong> ${p.vendorEmail}</p>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 rounded-lg flex flex-col gap-2">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Project Asset</p>
+                        ${p.assetLink ? `<a href="${p.assetLink}" target="_blank" class="text-indigo-600 text-xs font-bold truncate">🔗 View Folder</a>` : `<span class="text-gray-300 text-xs italic">No link provided</span>`}
+                    </div>
+
+                    ${currentView === 'vendor' ? `
+                        <div class="pt-3 border-t mt-auto space-y-2">
+                             <select onchange="updateField('${key}', 'status', this.value)" class="w-full text-xs border rounded p-2 bg-white font-bold">
+                                <option value="Ongoing" ${p.status === 'Ongoing' ? 'selected' : ''}>Ongoing</option>
+                                <option value="Completed" ${p.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                             </select>
+                             <input type="url" placeholder="Update Link" onblur="updateField('${key}', 'assetLink', this.value)" class="w-full text-xs border rounded p-2" value="${p.assetLink}">
+                        </div>
+                    ` : `
+                        <div class="pt-3 border-t mt-auto flex justify-between items-center">
+                            <button onclick="deleteProj('${key}')" class="text-red-400 text-[10px] font-bold hover:text-red-600">DELETE</button>
+                            <span class="text-[9px] text-gray-300">DEADLINE: ${p.expectedDelivery}</span>
+                        </div>
+                    `}
+                </div>`;
+                container.insertAdjacentHTML('beforeend', card);
             });
         }
-        renderProjects();
+
+        // Real-time listener
+        db.ref('projects').on('value', (snap) => {
+            allData = snap.val();
+            renderUI(allData);
+        });
     </script>
 </body>
 </html>
