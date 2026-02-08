@@ -3,23 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VendorFlow | Free Management Portal</title>
+    <title>VendorFlow | Pro Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans">
 
-    <nav class="bg-indigo-800 text-white px-6 py-2 flex justify-end gap-6 text-xs font-bold shadow-md">
+    <nav class="bg-indigo-900 text-white px-6 py-2 flex justify-end gap-6 text-xs font-bold shadow-md">
         <button onclick="switchView('admin')" class="hover:text-indigo-200 transition">ADMIN DASHBOARD</button>
         <button onclick="switchView('vendor')" class="hover:text-indigo-200 transition">VENDOR PORTAL</button>
     </nav>
 
     <nav class="bg-white border-b border-gray-200 px-6 py-5 flex justify-between items-center shadow-sm">
-        <h1 id="dashboard-title" class="text-2xl font-extrabold text-indigo-600">Admin Dashboard</h1>
-        <button id="add-btn" onclick="toggleModal()" class="bg-indigo-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition">
-            + New Assignment
-        </button>
+        <h1 id="dashboard-title" class="text-2xl font-extrabold text-indigo-600 font-sans">Admin Dashboard</h1>
+        <div class="flex gap-3">
+            <button id="export-btn" onclick="exportToExcel()" class="bg-emerald-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-emerald-700 shadow-md transition">
+                Export Report
+            </button>
+            <button id="add-btn" onclick="toggleModal()" class="bg-indigo-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition">
+                + New Project
+            </button>
+        </div>
     </nav>
 
     <main class="max-w-7xl mx-auto p-6">
@@ -29,28 +35,22 @@
 
     <div id="modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Assign Project</h2>
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Assign Project</h2>
             <form id="project-form" class="space-y-4">
-                <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase">General Details</label>
-                    <input type="text" id="p-name" placeholder="Project Name" class="w-full border rounded-xl p-3 mt-1" required>
-                    <input type="text" id="p-vendor" placeholder="Vendor Name" class="w-full border rounded-xl p-3 mt-2" required>
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase">Timeline & Assets</label>
-                    <input type="datetime-local" id="p-deadline" class="w-full border rounded-xl p-3 mt-1" required>
-                    <input type="url" id="p-link" placeholder="Asset Link (Drive/Dropbox/WeTransfer)" class="w-full border rounded-xl p-3 mt-2">
-                </div>
+                <input type="text" id="p-name" placeholder="Project Name" class="w-full border rounded-xl p-3" required>
+                <input type="text" id="p-vendor" placeholder="Vendor Name" class="w-full border rounded-xl p-3" required>
+                <input type="datetime-local" id="p-deadline" class="w-full border rounded-xl p-3" required>
+                <input type="url" id="p-link" placeholder="Asset Link (Drive/Dropbox)" class="w-full border rounded-xl p-3">
                 <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="toggleModal()" class="flex-1 px-4 py-3 border rounded-xl font-bold hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-md">Create</button>
+                    <button type="button" onclick="toggleModal()" class="flex-1 px-4 py-3 border rounded-xl font-bold">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold">Create</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIGURATION (Updated with your Details) ---
+        // --- 1. CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyCwAgdMQcaX91d98IGRZEmUcaD-54lqdDw",
             authDomain: "webapp-97f44.firebaseapp.com",
@@ -63,20 +63,57 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        let projectsData = {}; // Global variable to store projects for export
 
         let currentView = 'admin';
-        const modal = document.getElementById('modal');
-        function toggleModal() { modal.classList.toggle('hidden'); }
+        function toggleModal() { document.getElementById('modal').classList.toggle('hidden'); }
 
-        // Switcher Logic
         function switchView(view) {
             currentView = view;
             document.getElementById('dashboard-title').innerText = view === 'admin' ? "Admin Dashboard" : "Vendor Portal";
             document.getElementById('add-btn').style.display = view === 'admin' ? 'block' : 'none';
+            document.getElementById('export-btn').style.display = view === 'admin' ? 'block' : 'none';
             renderProjects();
         }
 
-        // --- 2. DATA OPERATIONS ---
+        // --- 2. EXCEL EXPORT ENGINE ---
+        function exportToExcel() {
+            if (Object.keys(projectsData).length === 0) return alert("No data to export!");
+
+            const wb = XLSX.utils.book_new();
+            
+            // 1. Create Summary Data
+            const summaryRows = Object.values(projectsData).map(p => ({
+                "Project Name": p.projectName,
+                "Vendor Name": p.vendorName,
+                "Deadline": new Date(p.expectedDelivery).toLocaleString(),
+                "Status": p.status,
+                "Link": p.assetLink || "N/A"
+            }));
+            const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Monthly Summary");
+
+            // 2. Create Vendor-Specific Sheets
+            const vendors = [...new Set(Object.values(projectsData).map(p => p.vendorName))];
+            
+            vendors.forEach(vendor => {
+                const vendorRows = Object.values(projectsData)
+                    .filter(p => p.vendorName === vendor)
+                    .map(p => ({
+                        "Project Name": p.projectName,
+                        "Deadline": new Date(p.expectedDelivery).toLocaleString(),
+                        "Status": p.status,
+                        "Asset Link": p.assetLink || "N/A"
+                    }));
+                const wsVendor = XLSX.utils.json_to_sheet(vendorRows);
+                XLSX.utils.book_append_sheet(wb, wsVendor, vendor.substring(0, 31)); // Sheets limited to 31 chars
+            });
+
+            // 3. Download
+            XLSX.writeFile(wb, `VendorFlow_Report_${new Date().getMonth() + 1}_2026.xlsx`);
+        }
+
+        // --- 3. DATABASE OPERATIONS (same as before) ---
         document.getElementById('project-form').onsubmit = (e) => {
             e.preventDefault();
             const projectData = {
@@ -87,100 +124,46 @@
                 status: "Didn't Start",
                 timestamp: Date.now()
             };
-
-            db.ref('projects').push(projectData).then(() => {
-                toggleModal();
-                e.target.reset();
-            });
+            db.ref('projects').push(projectData).then(() => { toggleModal(); e.target.reset(); });
         };
 
         function updateProject(key, field, value) {
-            let updates = {};
-            updates[field] = value;
+            let updates = {}; updates[field] = value;
             db.ref(`projects/${key}`).update(updates);
         }
 
-        function deleteProject(key) {
-            if(confirm("Permanently delete this project?")) {
-                db.ref(`projects/${key}`).remove();
-            }
-        }
-
-        // --- 3. RENDERING ENGINE ---
         function renderProjects() {
             db.ref('projects').on('value', (snapshot) => {
+                projectsData = snapshot.val() || {}; // Sync global data for export
                 const container = document.getElementById('project-container');
                 container.innerHTML = '';
                 
                 snapshot.forEach((child) => {
                     const p = child.val();
                     const key = child.key;
-
                     const card = `
-                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-5 hover:shadow-md transition-all">
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
                             <div class="flex justify-between items-start">
-                                <h3 class="font-extrabold text-xl text-gray-800 leading-tight">${p.projectName}</h3>
-                                <span class="px-3 py-1 rounded-full text-[10px] uppercase font-black tracking-widest ${getStatusStyle(p.status)}">
-                                    ${p.status}
-                                </span>
+                                <h3 class="font-bold text-lg">${p.projectName}</h3>
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${p.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${p.status}</span>
                             </div>
-                            
-                            <div class="space-y-1">
-                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wide">Primary Vendor</p>
-                                <p class="text-sm font-semibold text-gray-700">${p.vendorName}</p>
+                            <p class="text-sm font-semibold text-gray-600">👤 ${p.vendorName}</p>
+                            <div class="bg-gray-50 p-3 rounded-xl text-xs space-y-2">
+                                <p class="text-gray-400">🔗 Link: ${p.assetLink ? `<a href="${p.assetLink}" target="_blank" class="text-indigo-600">Open Folder</a>` : 'No link'}</p>
                             </div>
-
-                            <div class="space-y-1">
-                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wide">Deadline</p>
-                                <p class="text-sm font-semibold text-gray-700">${new Date(p.expectedDelivery).toLocaleString()}</p>
-                            </div>
-
-                            <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
-                                <p class="text-[10px] font-black text-indigo-400 uppercase mb-2">Project Assets</p>
-                                ${p.assetLink ? 
-                                    `<a href="${p.assetLink}" target="_blank" class="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:underline truncate">
-                                        🔗 Open Shareable Folder
-                                    </a>` : 
-                                    `<p class="text-gray-400 text-xs italic">No links added yet</p>`
-                                }
-                            </div>
-
                             ${currentView === 'vendor' ? `
-                                <div class="pt-4 border-t space-y-3">
-                                    <div>
-                                        <label class="text-[10px] font-black text-gray-400 uppercase">Update Status</label>
-                                        <select onchange="updateProject('${key}', 'status', this.value)" class="w-full mt-1 border rounded-xl p-2 text-sm font-bold bg-white">
-                                            <option value="Didn't Start" ${p.status === "Didn't Start" ? 'selected' : ''}>Didn't Start</option>
-                                            <option value="Ongoing" ${p.status === "Ongoing" ? 'selected' : ''}>Ongoing</option>
-                                            <option value="Completed" ${p.status === "Completed" ? 'selected' : ''}>Completed</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="text-[10px] font-black text-gray-400 uppercase">Submission Link</label>
-                                        <input type="url" placeholder="Paste link here..." 
-                                            onblur="updateProject('${key}', 'assetLink', this.value)"
-                                            class="w-full mt-1 border rounded-xl p-2 text-xs" value="${p.assetLink}">
-                                    </div>
-                                </div>
-                            ` : `
-                                <div class="flex justify-between items-center pt-4 border-t">
-                                    <button onclick="deleteProject('${key}')" class="text-red-400 text-xs font-bold hover:text-red-600">DELETE</button>
-                                    <span class="text-[10px] text-gray-300">ID: ${key.slice(-5)}</span>
-                                </div>
-                            `}
-                        </div>
-                    `;
+                                <select onchange="updateProject('${key}', 'status', this.value)" class="w-full border rounded-xl p-2 text-xs font-bold">
+                                    <option value="Didn't Start" ${p.status === 'Didn't Start' ? 'selected' : ''}>Didn't Start</option>
+                                    <option value="Ongoing" ${p.status === 'Ongoing' ? 'selected' : ''}>Ongoing</option>
+                                    <option value="Completed" ${p.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                </select>
+                                <input type="url" placeholder="Update link..." onblur="updateProject('${key}', 'assetLink', this.value)" class="w-full border rounded-xl p-2 text-xs mt-2" value="${p.assetLink}">
+                            ` : `<button onclick="db.ref('projects/${key}').remove()" class="text-red-400 text-xs font-bold">DELETE</button>`}
+                        </div>`;
                     container.insertAdjacentHTML('beforeend', card);
                 });
             });
         }
-
-        function getStatusStyle(status) {
-            if (status === "Completed") return "bg-emerald-100 text-emerald-700";
-            if (status === "Ongoing") return "bg-amber-100 text-amber-700";
-            return "bg-gray-100 text-gray-500";
-        }
-
         renderProjects();
     </script>
 </body>
