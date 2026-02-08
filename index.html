@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VendorFlow | Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-react/0.263.1/lucide-react.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
@@ -24,18 +23,9 @@
                 <p class="text-sm text-gray-500">Active Projects</p>
                 <p id="stat-active" class="text-3xl font-bold text-indigo-600">0</p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Pending Acceptance</p>
-                <p id="stat-pending" class="text-3xl font-bold text-yellow-500">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Completed</p>
-                <p id="stat-done" class="text-3xl font-bold text-green-500">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <p class="text-sm text-gray-500">Overdue</p>
-                <p id="stat-overdue" class="text-3xl font-bold text-red-500">0</p>
-            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">Pending</p><p class="text-3xl font-bold text-yellow-500">0</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">Completed</p><p class="text-3xl font-bold text-green-500">0</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p class="text-sm text-gray-500">Overdue</p><p class="text-3xl font-bold text-red-500">0</p></div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -49,32 +39,19 @@
                         <th class="px-6 py-3 text-sm font-semibold text-gray-600">Action</th>
                     </tr>
                 </thead>
-                <tbody id="project-list" class="divide-y divide-gray-100">
-                    </tbody>
+                <tbody id="project-list" class="divide-y divide-gray-100"></tbody>
             </table>
         </div>
     </main>
 
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl w-full max-w-md p-8">
             <h2 class="text-xl font-bold mb-6">Create New Assignment</h2>
             <form id="project-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Project Name</label>
-                    <input type="text" id="p-name" class="w-full border rounded-lg p-2" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Vendor Name</label>
-                    <input type="text" id="p-vendor" class="w-full border rounded-lg p-2" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Vendor WhatsApp (+CountryCode)</label>
-                    <input type="text" id="p-mobile" placeholder="+1234567890" class="w-full border rounded-lg p-2" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Deadline</label>
-                    <input type="datetime-local" id="p-deadline" class="w-full border rounded-lg p-2" required>
-                </div>
+                <div><label class="block text-sm font-medium mb-1">Project Name</label><input type="text" id="p-name" class="w-full border rounded-lg p-2" required></div>
+                <div><label class="block text-sm font-medium mb-1">Vendor Name</label><input type="text" id="p-vendor" class="w-full border rounded-lg p-2" required></div>
+                <div><label class="block text-sm font-medium mb-1">Vendor WhatsApp</label><input type="text" id="p-mobile" placeholder="+91..." class="w-full border rounded-lg p-2" required></div>
+                <div><label class="block text-sm font-medium mb-1">Deadline</label><input type="datetime-local" id="p-deadline" class="w-full border rounded-lg p-2" required></div>
                 <div class="flex gap-3 mt-6">
                     <button type="button" onclick="toggleModal()" class="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
                     <button type="submit" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg">Assign & Notify</button>
@@ -84,29 +61,33 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
+        // --- 1. CONFIGURATION ---
         const firebaseConfig = {
-            apiKey: "YOUR_FIREBASE_API_KEY",
-            databaseURL: "YOUR_FIREBASE_DATABASE_URL",
-            projectId: "YOUR_PROJECT_ID",
+            apiKey: "AIzaSyCwAgdMQcaX91d98IGRZEmUcaD-54lqdDw",
+            authDomain: "webapp-97f44.firebaseapp.com",
+            projectId: "webapp-97f44",
+            storageBucket: "webapp-97f44.firebasestorage.app",
+            messagingSenderId: "907600719303",
+            appId: "1:907600719303:web:afa1d010eb867d652a3de2",
+            // NOTE: Add your Database URL from the Firebase Realtime Database tab
+            databaseURL: "https://webapp-97f44-default-rtdb.firebaseio.com" 
         };
-        
-        // Initialize Firebase
+
+        // --- 2. INITIALIZATION ---
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // UI Helpers
+        // --- 3. UI FUNCTIONS ---
         const modal = document.getElementById('modal');
         function toggleModal() { modal.classList.toggle('hidden'); }
 
-        // Send WhatsApp Notification (Via Twilio Logic - requires a small serverless proxy)
-        // In this GH-only version, we'll log the intention.
-        function sendWhatsApp(project) {
-            console.log(`Sending WhatsApp to ${project.vendorMobile}: Project ${project.projectName} assigned.`);
-            // In production, fetch your Twilio Function URL here.
+        function getStatusClass(status) {
+            if (status === "Completed") return "bg-green-100 text-green-700";
+            if (status === "Ongoing") return "bg-yellow-100 text-yellow-700";
+            return "bg-gray-100 text-gray-600";
         }
 
-        // Handle Form Submission
+        // --- 4. DATA HANDLING ---
         document.getElementById('project-form').onsubmit = (e) => {
             e.preventDefault();
             const projectData = {
@@ -118,24 +99,27 @@
                 timestamp: Date.now()
             };
 
-            const newPostKey = db.ref().child('projects').push().key;
-            db.ref('projects/' + newPostKey).set(projectData);
-            
-            sendWhatsApp(projectData);
-            toggleModal();
-            e.target.reset();
+            // Push to Firebase
+            db.ref('projects').push(projectData)
+                .then(() => {
+                    console.log("Data saved!");
+                    toggleModal();
+                    e.target.reset();
+                })
+                .catch((error) => alert("Error: " + error.message));
         };
 
-        // Live Table Updates
+        // --- 5. REAL-TIME SYNC ---
         db.ref('projects').on('value', (snapshot) => {
             const list = document.getElementById('project-list');
             list.innerHTML = '';
-            let stats = { active: 0, pending: 0, done: 0, overdue: 0 };
+            let count = 0;
 
             snapshot.forEach((child) => {
                 const p = child.val();
+                count++;
                 const row = `
-                    <tr class="hover:bg-gray-50 transition">
+                    <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium">${p.projectName}</td>
                         <td class="px-6 py-4">${p.vendorName}</td>
                         <td class="px-6 py-4 text-gray-500">${new Date(p.expectedDelivery).toLocaleString()}</td>
@@ -150,19 +134,9 @@
                     </tr>
                 `;
                 list.insertAdjacentHTML('beforeend', row);
-                
-                // Update stats logic here...
-                stats.active++;
             });
-
-            document.getElementById('stat-active').innerText = stats.active;
+            document.getElementById('stat-active').innerText = count;
         });
-
-        function getStatusClass(status) {
-            if (status === "Completed") return "bg-green-100 text-green-700";
-            if (status === "Ongoing") return "bg-yellow-100 text-yellow-700";
-            return "bg-gray-100 text-gray-600";
-        }
     </script>
 </body>
 </html>
